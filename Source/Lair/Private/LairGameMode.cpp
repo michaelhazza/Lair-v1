@@ -279,6 +279,12 @@ AUnit* ALairGameMode::SpawnUnitAtBase(int32 PlayerIndex, FName UnitTypeID)
 		BaseTile->PlaceUnitInSubSlot(NewUnit, AvailableSubSlot);
 		NewUnit->SetCurrentTile(BaseTile, AvailableSubSlot);
 
+		// Track the unit in player state
+		if (PlayerIndex >= 0 && PlayerIndex < PlayerStates.Num() && PlayerStates[PlayerIndex])
+		{
+			PlayerStates[PlayerIndex]->AddOwnedUnit(NewUnit);
+		}
+
 		UE_LOG(LogTemp, Log, TEXT("SpawnUnitAtBase: Spawned %s at (%d, %d) sub-slot %d"),
 			*UnitTypeID.ToString(), BaseCoord.X, BaseCoord.Y, AvailableSubSlot);
 	}
