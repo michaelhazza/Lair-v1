@@ -9,6 +9,7 @@
 #include "Tile.h"
 #include "Unit.h"
 #include "GameFramework/PlayerState.h"
+#include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 
 ALairGameMode::ALairGameMode()
@@ -70,6 +71,7 @@ void ALairGameMode::StartGame()
 
 	// Cache player states
 	PlayerStates.Empty();
+	AGameStateBase* GS = GetGameState<AGameStateBase>();
 	for (int32 i = 0; i < NumberOfPlayers; ++i)
 	{
 		// Create player states directly for hotseat mode
@@ -78,6 +80,13 @@ void ALairGameMode::StartGame()
 		{
 			NewPlayerState->InitializePlayer(i, LairConstants::STARTING_GOLD);
 			PlayerStates.Add(NewPlayerState);
+
+			// Register with GameState so engine systems (replication, UI, analytics) can see these states
+			if (GS)
+			{
+				GS->AddPlayerState(NewPlayerState);
+			}
+
 			UE_LOG(LogTemp, Log, TEXT("Created PlayerState for Player %d with %d gold"),
 				i, LairConstants::STARTING_GOLD);
 		}
@@ -271,9 +280,11 @@ AUnit* ALairGameMode::SpawnUnitAtBase(int32 PlayerIndex, FName UnitTypeID)
 	AUnit* NewUnit = GetWorld()->SpawnActor<AUnit>(UnitClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
 	if (NewUnit)
 	{
-		// Initialize the unit
-		NewUnit->InitializeFromDataTable(UnitTypeID, UnitData);
+		// Set owner BEFORE initializing from data table, so UpdateVisuals() uses correct player color
 		NewUnit->OwnerPlayerIndex = PlayerIndex;
+
+		// Initialize the unit (this calls UpdateVisuals internally)
+		NewUnit->InitializeFromDataTable(UnitTypeID, UnitData);
 
 		// Place on tile
 		BaseTile->PlaceUnitInSubSlot(NewUnit, AvailableSubSlot);
