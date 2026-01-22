@@ -132,15 +132,44 @@ bool ATile::PlaceUnitInSubSlot(AUnit* Unit, int32 SubSlotIndex)
 		return false;
 	}
 
-	SubSlots[SubSlotIndex] = Unit;
+	// Get unit size to handle wagons (size 2) properly
+	int32 UnitSize = Unit->GetSubSlotSize();
 
-	// Position unit at sub-slot location
+	// For wagons (size 2), verify and occupy both slots
+	if (UnitSize == 2)
+	{
+		if (SubSlotIndex >= SubSlots.Num() - 1)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ATile::PlaceUnitInSubSlot - Cannot place size 2 unit at slot %d"), SubSlotIndex);
+			return false;
+		}
+		if (SubSlots[SubSlotIndex + 1] != nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ATile::PlaceUnitInSubSlot - SubSlot %d is already occupied (wagon needs 2 slots)"), SubSlotIndex + 1);
+			return false;
+		}
+		// Occupy both slots for wagon
+		SubSlots[SubSlotIndex] = Unit;
+		SubSlots[SubSlotIndex + 1] = Unit;
+	}
+	else
+	{
+		SubSlots[SubSlotIndex] = Unit;
+	}
+
+	// Position unit at sub-slot location (for wagons, center between the two slots)
 	FVector UnitPosition = GetActorLocation() + GetSubSlotOffset(SubSlotIndex);
+	if (UnitSize == 2)
+	{
+		// Center wagon between the two slots
+		FVector Slot2Offset = GetSubSlotOffset(SubSlotIndex + 1);
+		UnitPosition = GetActorLocation() + (GetSubSlotOffset(SubSlotIndex) + Slot2Offset) * 0.5f;
+	}
 	UnitPosition.Z += 50.0f; // Raise unit above tile
 	Unit->SetActorLocation(UnitPosition);
 
-	UE_LOG(LogTemp, Verbose, TEXT("ATile::PlaceUnitInSubSlot - Placed unit in slot %d at tile (%d, %d)"),
-		SubSlotIndex, GridCoord.X, GridCoord.Y);
+	UE_LOG(LogTemp, Verbose, TEXT("ATile::PlaceUnitInSubSlot - Placed unit (size %d) in slot %d at tile (%d, %d)"),
+		UnitSize, SubSlotIndex, GridCoord.X, GridCoord.Y);
 
 	return true;
 }
@@ -152,6 +181,8 @@ bool ATile::RemoveUnitFromSubSlot(AUnit* Unit)
 		return false;
 	}
 
+	bool bFound = false;
+	// Remove from ALL slots (handles wagons that occupy 2 slots)
 	for (int32 i = 0; i < SubSlots.Num(); ++i)
 	{
 		if (SubSlots[i] == Unit)
@@ -159,12 +190,15 @@ bool ATile::RemoveUnitFromSubSlot(AUnit* Unit)
 			SubSlots[i] = nullptr;
 			UE_LOG(LogTemp, Verbose, TEXT("ATile::RemoveUnitFromSubSlot - Removed unit from slot %d at tile (%d, %d)"),
 				i, GridCoord.X, GridCoord.Y);
-			return true;
+			bFound = true;
 		}
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("ATile::RemoveUnitFromSubSlot - Unit not found on this tile"));
-	return false;
+	if (!bFound)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ATile::RemoveUnitFromSubSlot - Unit not found on this tile"));
+	}
+	return bFound;
 }
 
 TArray<AUnit*> ATile::GetAllUnitsOnTile() const
@@ -172,8 +206,9 @@ TArray<AUnit*> ATile::GetAllUnitsOnTile() const
 	TArray<AUnit*> Units;
 	for (int32 i = 0; i < SubSlots.Num(); ++i)
 	{
-		if (SubSlots[i] != nullptr)
+		if (SubSlots[i] != nullptr && !Units.Contains(SubSlots[i]))
 		{
+			// Avoid duplicates for wagons that occupy 2 slots
 			Units.Add(SubSlots[i]);
 		}
 	}
@@ -182,18 +217,20 @@ TArray<AUnit*> ATile::GetAllUnitsOnTile() const
 
 void ATile::SetTileColor(FLinearColor Color)
 {
-	if (DynamicMaterial)
-	{
-		DynamicMaterial->SetVectorParameterValue(FName("BaseColor"), Color);
-	}
-	else if (TileMesh)
+	if (!DynamicMaterial && TileMesh)
 	{
 		// Create dynamic material if not already created
 		DynamicMaterial = TileMesh->CreateAndSetMaterialInstanceDynamic(0);
-		if (DynamicMaterial)
-		{
-			DynamicMaterial->SetVectorParameterValue(FName("BaseColor"), Color);
-		}
+	}
+
+	if (DynamicMaterial)
+	{
+		// Try common material parameter names used in UE5
+		// Default lit materials often use "BaseColor" or "Base Color"
+		DynamicMaterial->SetVectorParameterValue(FName("BaseColor"), Color);
+		DynamicMaterial->SetVectorParameterValue(FName("Base Color"), Color);
+		// Also set emissive for visibility in case base color doesn't work
+		DynamicMaterial->SetVectorParameterValue(FName("EmissiveColor"), Color * 0.3f);
 	}
 }
 

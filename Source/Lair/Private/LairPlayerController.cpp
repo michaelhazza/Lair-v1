@@ -44,11 +44,10 @@ void ALairPlayerController::SetupInputComponent()
 
 	if (InputComponent)
 	{
-		// Bind left mouse click
-		InputComponent->BindAction("LeftMouseClick", IE_Pressed, this, &ALairPlayerController::OnLeftMouseClick);
-
-		// Bind right mouse click
-		InputComponent->BindAction("RightMouseClick", IE_Pressed, this, &ALairPlayerController::OnRightMouseClick);
+		// Bind mouse buttons directly using built-in key names
+		// This works without requiring custom action mappings in project settings
+		InputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ALairPlayerController::OnLeftMouseClick);
+		InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ALairPlayerController::OnRightMouseClick);
 	}
 }
 

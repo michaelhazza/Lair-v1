@@ -122,17 +122,18 @@ void AUnit::SetSelected(bool bSelected)
 
 void AUnit::SetUnitColor(FLinearColor Color)
 {
-	if (DynamicMaterial)
-	{
-		DynamicMaterial->SetVectorParameterValue(FName("BaseColor"), Color);
-	}
-	else if (UnitMesh)
+	if (!DynamicMaterial && UnitMesh)
 	{
 		DynamicMaterial = UnitMesh->CreateAndSetMaterialInstanceDynamic(0);
-		if (DynamicMaterial)
-		{
-			DynamicMaterial->SetVectorParameterValue(FName("BaseColor"), Color);
-		}
+	}
+
+	if (DynamicMaterial)
+	{
+		// Try common material parameter names used in UE5
+		DynamicMaterial->SetVectorParameterValue(FName("BaseColor"), Color);
+		DynamicMaterial->SetVectorParameterValue(FName("Base Color"), Color);
+		// Also set emissive for visibility in case base color doesn't work
+		DynamicMaterial->SetVectorParameterValue(FName("EmissiveColor"), Color * 0.5f);
 	}
 }
 

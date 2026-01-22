@@ -149,15 +149,21 @@ ATile* UBoardSystemComponent::SpawnTile(FIntPoint Coord, FName TileTypeID, int32
 	WorldPosition.Y = Coord.Y * LairConstants::TILE_WORLD_SIZE;
 	WorldPosition.Z = 0.0f;
 
-	// Spawn tile
+	// Spawn tile with deferred spawn to set properties before BeginPlay
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.bDeferConstruction = true;
 
 	ATile* NewTile = World->SpawnActor<ATile>(TileClass, WorldPosition, FRotator::ZeroRotator, SpawnParams);
 	if (NewTile)
 	{
+		// Set properties BEFORE calling FinishSpawning (which calls BeginPlay)
 		NewTile->Initialize(Coord, TileTypeID);
 		NewTile->PlayerBaseIndex = PlayerBaseIndex;
+
+		// Now finish spawning (calls BeginPlay)
+		NewTile->FinishSpawning(FTransform(FRotator::ZeroRotator, WorldPosition));
+
 		TileGrid.Add(Coord, NewTile);
 
 		UE_LOG(LogTemp, Verbose, TEXT("UBoardSystemComponent::SpawnTile - Spawned tile at (%d, %d) type: %s base: %d"),
