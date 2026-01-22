@@ -83,9 +83,10 @@ void ALairGameMode::StartGame()
 		}
 	}
 
-	// Start the first turn
+	// Bind to turn manager events before starting first turn
 	if (TurnManager)
 	{
+		TurnManager->OnPlayerChanged.AddDynamic(this, &ALairGameMode::OnPlayerChanged);
 		TurnManager->SetTotalPlayers(NumberOfPlayers);
 		TurnManager->StartFirstTurn();
 	}
@@ -307,4 +308,38 @@ void ALairGameMode::EndCurrentTurn()
 	{
 		TurnManager->EndTurn();
 	}
+}
+
+void ALairGameMode::OnPlayerChanged(int32 NewPlayerIndex)
+{
+	UE_LOG(LogTemp, Log, TEXT("ALairGameMode::OnPlayerChanged - Player changed to %d"), NewPlayerIndex);
+
+	// Reset movement for the new player's units
+	ResetMovementForPlayer(NewPlayerIndex);
+}
+
+void ALairGameMode::ResetMovementForPlayer(int32 PlayerIndex)
+{
+	if (PlayerIndex < 0 || PlayerIndex >= PlayerStates.Num())
+	{
+		return;
+	}
+
+	ALairPlayerState* PlayerState = PlayerStates[PlayerIndex];
+	if (!PlayerState)
+	{
+		return;
+	}
+
+	TArray<AUnit*> OwnedUnits = PlayerState->GetOwnedUnits();
+	for (AUnit* Unit : OwnedUnits)
+	{
+		if (Unit)
+		{
+			Unit->ResetMovement();
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("ALairGameMode::ResetMovementForPlayer - Reset movement for %d units owned by Player %d"),
+		OwnedUnits.Num(), PlayerIndex);
 }

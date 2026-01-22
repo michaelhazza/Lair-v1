@@ -154,4 +154,11 @@ protected:
 
 	/** Spawn a unit at the player's base */
 	AUnit* SpawnUnitAtBase(int32 PlayerIndex, FName UnitTypeID);
+
+	/** Called when the current player changes - resets movement for new player's units */
+	UFUNCTION()
+	void OnPlayerChanged(int32 NewPlayerIndex);
+
+	/** Reset movement for all units owned by a player */
+	void ResetMovementForPlayer(int32 PlayerIndex);
 };
