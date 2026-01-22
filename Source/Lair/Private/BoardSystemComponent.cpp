@@ -37,10 +37,30 @@ void UBoardSystemComponent::InitializeBoard(const FString& LayoutTablePath)
 	}
 	TileGrid.Empty();
 
-	// Try to load from data table first
-	if (BoardLayoutDataTable)
+	// If a path is provided, try to load the data table from that path
+	UDataTable* TableToUse = BoardLayoutDataTable;
+	if (!LayoutTablePath.IsEmpty())
 	{
+		UDataTable* LoadedTable = LoadObject<UDataTable>(nullptr, *LayoutTablePath);
+		if (LoadedTable)
+		{
+			TableToUse = LoadedTable;
+			UE_LOG(LogTemp, Log, TEXT("UBoardSystemComponent::InitializeBoard - Loaded data table from path: %s"), *LayoutTablePath);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("UBoardSystemComponent::InitializeBoard - Failed to load data table from path: %s, using default"), *LayoutTablePath);
+		}
+	}
+
+	// Try to load from data table first
+	if (TableToUse)
+	{
+		// Temporarily set BoardLayoutDataTable for LoadBoardFromDataTable to use
+		UDataTable* OriginalTable = BoardLayoutDataTable;
+		BoardLayoutDataTable = TableToUse;
 		LoadBoardFromDataTable();
+		BoardLayoutDataTable = OriginalTable;
 	}
 	else
 	{

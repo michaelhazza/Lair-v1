@@ -33,17 +33,17 @@ void URulesEngineComponent::CacheDataFromTables()
 	// Cache unit data
 	if (UnitsDataTable)
 	{
-		TArray<FUnitData*> AllUnitRows;
-		UnitsDataTable->GetAllRows<FUnitData>(TEXT("CacheDataFromTables"), AllUnitRows);
-
+		// Iterate by row name and use FindRow to ensure correct key/value pairing
+		// (GetAllRows and GetRowNames may not return in the same order)
 		TArray<FName> RowNames = UnitsDataTable->GetRowNames();
-		for (int32 i = 0; i < RowNames.Num() && i < AllUnitRows.Num(); ++i)
+		for (const FName& RowName : RowNames)
 		{
-			if (AllUnitRows[i])
+			FUnitData* UnitRow = UnitsDataTable->FindRow<FUnitData>(RowName, TEXT("CacheDataFromTables"));
+			if (UnitRow)
 			{
-				CachedUnitData.Add(RowNames[i], *AllUnitRows[i]);
+				CachedUnitData.Add(RowName, *UnitRow);
 				UE_LOG(LogTemp, Verbose, TEXT("Cached unit: %s (Cost: %d, Movement: %d)"),
-					*RowNames[i].ToString(), AllUnitRows[i]->Cost, AllUnitRows[i]->MovementPoints);
+					*RowName.ToString(), UnitRow->Cost, UnitRow->MovementPoints);
 			}
 		}
 	}
@@ -80,15 +80,15 @@ void URulesEngineComponent::CacheDataFromTables()
 	// Cache tile type data
 	if (TileTypesDataTable)
 	{
-		TArray<FTileTypeData*> AllTileRows;
-		TileTypesDataTable->GetAllRows<FTileTypeData>(TEXT("CacheDataFromTables"), AllTileRows);
-
+		// Iterate by row name and use FindRow to ensure correct key/value pairing
+		// (GetAllRows and GetRowNames may not return in the same order)
 		TArray<FName> RowNames = TileTypesDataTable->GetRowNames();
-		for (int32 i = 0; i < RowNames.Num() && i < AllTileRows.Num(); ++i)
+		for (const FName& RowName : RowNames)
 		{
-			if (AllTileRows[i])
+			FTileTypeData* TileRow = TileTypesDataTable->FindRow<FTileTypeData>(RowName, TEXT("CacheDataFromTables"));
+			if (TileRow)
 			{
-				CachedTileTypeData.Add(RowNames[i], *AllTileRows[i]);
+				CachedTileTypeData.Add(RowName, *TileRow);
 			}
 		}
 	}
