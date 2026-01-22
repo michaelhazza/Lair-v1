@@ -242,25 +242,14 @@ void ATile::SetHighlight(bool bHighlighted, FLinearColor Color)
 	}
 	else
 	{
-		// Reset to default color based on tile type
-		if (PlayerBaseIndex == 0)
-		{
-			SetTileColor(FLinearColor(0.0f, 0.0f, 1.0f, 1.0f)); // Blue for P1
-		}
-		else if (PlayerBaseIndex == 1)
-		{
-			SetTileColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)); // Red for P2
-		}
-		else
-		{
-			SetTileColor(FLinearColor::White);
-		}
+		// Reset to default color using centralized logic
+		UpdateVisuals();
 	}
 }
 
 void ATile::UpdateVisuals()
 {
-	// Set color based on tile type
+	// Priority: PlayerBase color > TileType DebugColor > White default
 	if (PlayerBaseIndex == 0)
 	{
 		SetTileColor(FLinearColor(0.0f, 0.0f, 1.0f, 1.0f)); // Blue for P1
@@ -269,10 +258,48 @@ void ATile::UpdateVisuals()
 	{
 		SetTileColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)); // Red for P2
 	}
+	else if (CachedTileTypeData.DebugColor != FLinearColor::White)
+	{
+		// Use tile type debug color if set (non-white)
+		SetTileColor(CachedTileTypeData.DebugColor);
+	}
 	else
 	{
 		SetTileColor(FLinearColor::White); // Default white for empty
 	}
+}
+
+void ATile::SetTileTypeData(const FTileTypeData& InTileTypeData)
+{
+	CachedTileTypeData = InTileTypeData;
+	UpdateVisuals();
+}
+
+int32 ATile::FindAvailableSubSlot(int32 SubSlotSize) const
+{
+	if (SubSlotSize == 2)
+	{
+		// For wagons (size 2), need contiguous slots
+		for (int32 i = 0; i < LairConstants::TILE_SUB_SLOTS - 1; ++i)
+		{
+			if (SubSlots[i] == nullptr && SubSlots[i + 1] == nullptr)
+			{
+				return i;
+			}
+		}
+	}
+	else
+	{
+		// For size 1 units, find any empty slot
+		for (int32 i = 0; i < SubSlots.Num(); ++i)
+		{
+			if (SubSlots[i] == nullptr)
+			{
+				return i;
+			}
+		}
+	}
+	return -1;
 }
 
 FVector ATile::GetSubSlotOffset(int32 SubSlotIndex) const

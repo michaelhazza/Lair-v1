@@ -39,14 +39,23 @@ void ALairGameMode::BeginPlay()
 
 	UE_LOG(LogTemp, Log, TEXT("ALairGameMode::BeginPlay - Starting game setup"));
 
-	// Initialize the rules engine with data tables
-	if (RulesEngine && UnitsDataTable && TileTypesDataTable)
+	// Initialize the rules engine - it will use defaults for any null tables
+	if (RulesEngine)
 	{
 		RulesEngine->Initialize(UnitsDataTable, TileTypesDataTable);
+
+		if (!UnitsDataTable)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ALairGameMode::BeginPlay - UnitsDataTable not set, using defaults"));
+		}
+		if (!TileTypesDataTable)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ALairGameMode::BeginPlay - TileTypesDataTable not set, using defaults"));
+		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ALairGameMode::BeginPlay - Missing data tables or RulesEngine"));
+		UE_LOG(LogTemp, Error, TEXT("ALairGameMode::BeginPlay - RulesEngine is null"));
 	}
 
 	// Start the game
@@ -69,9 +78,24 @@ void ALairGameMode::StartGame()
 		BoardSystem->InitializeBoard(TEXT(""));
 	}
 
-	// Cache player states
-	PlayerStates.Empty();
+	// Clean up existing player states before creating new ones (handles restarts)
 	AGameStateBase* GS = GetGameState<AGameStateBase>();
+	for (ALairPlayerState* ExistingState : PlayerStates)
+	{
+		if (ExistingState)
+		{
+			// Remove from GameState's PlayerArray if present
+			if (GS && GS->PlayerArray.Contains(ExistingState))
+			{
+				GS->PlayerArray.Remove(ExistingState);
+			}
+			// Destroy the actor
+			ExistingState->Destroy();
+		}
+	}
+	PlayerStates.Empty();
+
+	// Create new player states
 	for (int32 i = 0; i < NumberOfPlayers; ++i)
 	{
 		// Create player states directly for hotseat mode
@@ -217,52 +241,8 @@ AUnit* ALairGameMode::SpawnUnitAtBase(int32 PlayerIndex, FName UnitTypeID)
 	// Get unit data
 	FUnitData UnitData = RulesEngine->GetUnitData(UnitTypeID);
 
-	// Find an available sub-slot
-	int32 AvailableSubSlot = -1;
-	for (int32 i = 0; i < LairConstants::TILE_SUB_SLOTS; ++i)
-	{
-		// For wagons (size 2), need contiguous slots
-		if (UnitData.SubSlotSize == 2)
-		{
-			// Check if both slot i and i+1 are available
-			if (i < LairConstants::TILE_SUB_SLOTS - 1)
-			{
-				TArray<AUnit*> UnitsOnTile = BaseTile->GetAllUnitsOnTile();
-				bool Slot1Free = true;
-				bool Slot2Free = true;
-				for (AUnit* Unit : UnitsOnTile)
-				{
-					if (Unit && Unit->SubSlotIndex == i) Slot1Free = false;
-					if (Unit && Unit->SubSlotIndex == i + 1) Slot2Free = false;
-				}
-				if (Slot1Free && Slot2Free)
-				{
-					AvailableSubSlot = i;
-					break;
-				}
-			}
-		}
-		else
-		{
-			// Size 1 unit - find any free slot
-			TArray<AUnit*> UnitsOnTile = BaseTile->GetAllUnitsOnTile();
-			bool SlotFree = true;
-			for (AUnit* Unit : UnitsOnTile)
-			{
-				if (Unit && Unit->SubSlotIndex == i)
-				{
-					SlotFree = false;
-					break;
-				}
-			}
-			if (SlotFree)
-			{
-				AvailableSubSlot = i;
-				break;
-			}
-		}
-	}
-
+	// Find an available sub-slot using tile's helper method (eliminates duplicate logic)
+	int32 AvailableSubSlot = BaseTile->FindAvailableSubSlot(UnitData.SubSlotSize);
 	if (AvailableSubSlot < 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("SpawnUnitAtBase: No available sub-slot"));

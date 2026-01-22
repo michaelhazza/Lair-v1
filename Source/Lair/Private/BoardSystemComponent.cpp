@@ -76,6 +76,13 @@ void UBoardSystemComponent::GenerateDefaultBoard()
 {
 	BoardSize = FIntPoint(LairConstants::DEFAULT_BOARD_SIZE_X, LairConstants::DEFAULT_BOARD_SIZE_Y);
 
+	// Update player base coordinates to match actual board dimensions
+	if (PlayerBaseCoords.Num() >= 2)
+	{
+		PlayerBaseCoords[0] = FIntPoint(0, 0);
+		PlayerBaseCoords[1] = FIntPoint(BoardSize.X - 1, BoardSize.Y - 1);
+	}
+
 	for (int32 X = 0; X < BoardSize.X; ++X)
 	{
 		for (int32 Y = 0; Y < BoardSize.Y; ++Y)
@@ -144,6 +151,36 @@ void UBoardSystemComponent::LoadBoardFromDataTable()
 		}
 	}
 
+	// Validate player base coordinates exist within the board
+	for (int32 i = 0; i < PlayerBaseCoords.Num(); ++i)
+	{
+		FIntPoint BaseCoord = PlayerBaseCoords[i];
+		if (!TileGrid.Contains(BaseCoord))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("UBoardSystemComponent::LoadBoardFromDataTable - Player %d base at (%d, %d) has no tile, searching for fallback"),
+				i, BaseCoord.X, BaseCoord.Y);
+
+			// Try to find any tile with matching PlayerBaseIndex
+			bool bFoundFallback = false;
+			for (const auto& Pair : TileGrid)
+			{
+				if (Pair.Value && Pair.Value->PlayerBaseIndex == i)
+				{
+					PlayerBaseCoords[i] = Pair.Key;
+					bFoundFallback = true;
+					UE_LOG(LogTemp, Log, TEXT("UBoardSystemComponent::LoadBoardFromDataTable - Found fallback base for Player %d at (%d, %d)"),
+						i, Pair.Key.X, Pair.Key.Y);
+					break;
+				}
+			}
+
+			if (!bFoundFallback)
+			{
+				UE_LOG(LogTemp, Error, TEXT("UBoardSystemComponent::LoadBoardFromDataTable - No valid base found for Player %d!"), i);
+			}
+		}
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("UBoardSystemComponent::LoadBoardFromDataTable - Loaded %d tiles from data table"),
 		AllRows.Num());
 }
@@ -183,6 +220,16 @@ ATile* UBoardSystemComponent::SpawnTile(FIntPoint Coord, FName TileTypeID, int32
 
 		// Now finish spawning (calls BeginPlay)
 		NewTile->FinishSpawning(FTransform(FRotator::ZeroRotator, WorldPosition));
+
+		// Pass tile type data for DebugColor support (after BeginPlay so DynamicMaterial exists)
+		if (TileTypesDataTable)
+		{
+			FTileTypeData* TileData = TileTypesDataTable->FindRow<FTileTypeData>(TileTypeID, TEXT("SpawnTile"));
+			if (TileData)
+			{
+				NewTile->SetTileTypeData(*TileData);
+			}
+		}
 
 		TileGrid.Add(Coord, NewTile);
 
