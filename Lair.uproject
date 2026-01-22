@@ -1,0 +1,13 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.3",
+	"Category": "Games",
+	"Description": "LAIR - A turn-based strategy board game adaptation for Unreal Engine 5",
+	"Modules": [
+		{
+			"Name": "Lair",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

@@ -1,0 +1,61 @@
+# Unreal Engine 5 .gitignore
+
+# Build artifacts
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Plugin build artifacts
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+
+# Visual Studio
+.vs/
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# Xcode
+*.xcworkspace/
+*.xcodeproj/
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Compiled files
+*.pdb
+*.obj
+*.o
+
+# Crash reports
+CrashReportClient/
+
+# Local user settings
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.opendb
+
+# Generated files
+*.generated.h
+*.gen.cpp
+
+# Content cooking
+Cooked/
+
+# Automation
+Automation/Reports/
+Automation/RunFiles/
