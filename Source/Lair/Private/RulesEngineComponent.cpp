@@ -177,6 +177,9 @@ FTileTypeData URulesEngineComponent::GetTileTypeData(FName TileTypeID) const
 		return *TileData;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("URulesEngineComponent::GetTileTypeData - Unknown tile type: %s"),
+		*TileTypeID.ToString());
+
 	return FTileTypeData();
 }
 
