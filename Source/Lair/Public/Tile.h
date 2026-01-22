@@ -135,6 +135,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tile")
 	void SetHighlight(bool bHighlighted, FLinearColor Color = FLinearColor::Green);
 
+	/**
+	 * Set tile type data (called by BoardSystem during spawn).
+	 * Used for DebugColor and other tile type properties.
+	 * @param InTileTypeData - Tile type data from data table
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Tile")
+	void SetTileTypeData(const FTileTypeData& InTileTypeData);
+
+	/**
+	 * Find an available sub-slot for a unit of the given size.
+	 * @param SubSlotSize - Size of the unit (1 for normal, 2 for wagons)
+	 * @return Index of available slot, or -1 if none available
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Tile")
+	int32 FindAvailableSubSlot(int32 SubSlotSize) const;
+
 protected:
 	/** Units occupying each sub-slot (index 0-3) */
 	UPROPERTY()
@@ -143,6 +159,9 @@ protected:
 	/** Dynamic material instance for color changes */
 	UPROPERTY()
 	UMaterialInstanceDynamic* DynamicMaterial;
+
+	/** Cached tile type data for visuals (DebugColor, etc.) */
+	FTileTypeData CachedTileTypeData;
 
 	/** Update visual representation */
 	void UpdateVisuals();
